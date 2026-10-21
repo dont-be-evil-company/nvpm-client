@@ -8,11 +8,11 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
 )
 
-var DEFAULT_REGISTRY_URL = "https://github.com/mistweaverco/nvpm-registry/releases/latest/download/nvpm-registry.json.zip"
+var DEFAULT_REGISTRY_URL = "https://github.com/dont-be-evil-company/nvpm-registry/releases/latest/download/nvpm-registry.json.zip"
 
 type errMsg error
 

@@ -4,7 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,6 +24,15 @@ func TestParseUpdateResolutionFlag(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"main", "develop"}, p.Branches)
 	assert.Equal(t, 14*24*time.Hour, p.Gap)
+
+	p, err = ParseUpdateResolutionFlag("never")
+	require.NoError(t, err)
+	assert.Equal(t, config.PreferBranchWhenNever, p.Kind)
+
+	p, err = ParseUpdateResolutionFlag("prefer-release")
+	require.NoError(t, err)
+	assert.Equal(t, config.PreferBranchWhenNever, p.Kind)
+	assert.Equal(t, config.PreferBranchWhenNever, local_packages_parser.LockUpdateResolutionFromConfig(p).ToConfig().Kind)
 }
 
 func TestParseUpdateResolutionFlagInvalid(t *testing.T) {

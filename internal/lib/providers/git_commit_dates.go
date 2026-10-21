@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/githubauth"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/githubauth"
 )
 
 // gitCommitDateHTTPGet is overridable in tests (GitLab/Codeberg).

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
 )
 
 // registerNestedInstallOutputHooks wires stdout for installs triggered while another

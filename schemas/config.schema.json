@@ -71,8 +71,8 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "description": "always: never use tags/releases. release-age-gap: use branch when the latest tag/release is at least gap old and the branch tip is newer.",
-                      "enum": ["always", "release-age-gap"]
+                      "description": "always: never use tags/releases. release-age-gap: use branch when the latest tag/release is at least gap old and the branch tip is newer. never: always prefer the latest tag or release when one exists; a branch is used only when no tag exists.",
+                      "enum": ["always", "release-age-gap", "never"]
                     },
                     "gap": {
                       "type": "string",

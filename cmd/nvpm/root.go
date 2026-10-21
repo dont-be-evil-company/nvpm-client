@@ -3,17 +3,19 @@ package nvpm
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/version"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/version"
 	"github.com/spf13/cobra"
 )
 
 var cfg = config.NewConfig(config.Config{
 	Flags: config.ConfigFlags{
-		CacheMaxAge:             24 * time.Hour,                          // Default to 24 hours
+		CacheMaxAge:             6 * time.Hour,                           // Default registry freshness window
 		MinReleaseAge:           7 * 24 * time.Hour,                      // Default to 7 days (discovery-time based)
 		PreferBranchOverRelease: config.DefaultPreferBranchOverRelease(), // Prefer branch when release is stale
 		Color:                   config.ColorModeAuto,                    // Default to auto (respect TTY)
@@ -53,8 +55,12 @@ func init() {
 	rootCmd.AddCommand(rmCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(upCmd)
+	rootCmd.AddCommand(pinCmd)
+	rootCmd.AddCommand(unpinCmd)
+	rootCmd.AddCommand(diffCmd)
+	rootCmd.AddCommand(tuiCmd)
 	rootCmd.PersistentFlags().BoolVar(&cfg.Flags.Version, "version", false, "version")
-	rootCmd.PersistentFlags().DurationVar(&cfg.Flags.CacheMaxAge, "cache-max-age", 24*time.Hour, "maximum age of registry cache (e.g., 1h, 24h, 7d)")
+	rootCmd.PersistentFlags().DurationVar(&cfg.Flags.CacheMaxAge, "cache-max-age", 6*time.Hour, "maximum age of the registry cache before ls and other commands refresh it (e.g. 1h, 6h, 24h); config.yaml registry.cache-max-age also accepts 7d")
 	rootCmd.PersistentFlags().DurationVar(&cfg.Flags.MinReleaseAge, "min-release-age", 7*24*time.Hour, "minimum age before installing/updating a newly discovered version (uses local discovery time; set 0 to disable)")
 	colorFlag := rootCmd.PersistentFlags().VarPF(&cfg.Flags.Color, "color", "", "when to use colors and icons: always, auto (default), never")
 	colorFlag.NoOptDefVal = string(config.ColorModeAlways) // If --color is used without value, default to "always"
@@ -68,8 +74,10 @@ func init() {
 		cfg.Flags.PreferBranchOverRelease = config.DefaultPreferBranchOverRelease()
 		if fileCfg, ok, err := config.LoadFileConfig(); err == nil && ok {
 			if !cmd.Flags().Changed("cache-max-age") {
-				if d := fileCfg.RegistryCacheMaxAgeOrZero(); d > 0 {
-					cfg.Flags.CacheMaxAge = d
+				if raw := strings.TrimSpace(fileCfg.Registry.CacheMaxAge); raw != "" {
+					if d, err := config.ParseDuration(raw); err == nil && d >= 0 {
+						cfg.Flags.CacheMaxAge = d
+					}
 				}
 			}
 			if !cmd.Flags().Changed("min-release-age") {
@@ -86,6 +94,7 @@ func init() {
 			}
 		}
 		providers.SetPreferBranchPolicyFromConfig(cfg.Flags.PreferBranchOverRelease)
+		files.SetRegistryCacheMaxAgeOverride(cfg.Flags.CacheMaxAge)
 
 		// Parse output mode from flag value
 		if outputFlagValue != "" {

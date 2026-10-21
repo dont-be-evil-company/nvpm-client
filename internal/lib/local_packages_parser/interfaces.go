@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
 )
 
 // FileManager defines the interface for file operations

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
 	"github.com/spf13/cobra"
 )
 

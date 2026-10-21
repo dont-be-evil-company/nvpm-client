@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
-	"github.com/mistweaverco/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
 )
 
 // Emoji icons

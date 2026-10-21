@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -665,7 +665,7 @@ func TestUpdateCommandFullOutputGolden(t *testing.T) {
 		}
 		defer func() { newUpdateService = prevUpdateService }()
 
-		upCmd.Run(upCmd, []string{"kulala.nvim@v6.0.0", "github:mistweaverco/kulala.nvim@v6.0.0"})
+		upCmd.Run(upCmd, []string{"kulala.nvim@v6.0.0", "github:dont-be-evil-company/kulala.nvim@v6.0.0"})
 
 		allOutput := strings.Join(out.Output, "\n")
 		assert.Contains(t, allOutput, "cannot target a specific version")
@@ -674,6 +674,56 @@ func TestUpdateCommandFullOutputGolden(t *testing.T) {
 		assert.Contains(t, allOutput, "No packages updated.")
 		assert.NotContains(t, allOutput, "Successfully updated")
 	})
+}
+
+func TestUpdateAllPackagesSkipsPinnedOutdated(t *testing.T) {
+	updated := false
+	providers.SetProviderFactory(&providers.MockProviderFactory{
+		MockNPMProvider: &providers.MockPackageManager{
+			UpdateFunc: func(string) bool {
+				updated = true
+				return true
+			},
+		},
+	})
+	t.Cleanup(providers.ResetProviderFactory)
+
+	oldDownload := downloadAndUnzipRegistryFn
+	downloadAndUnzipRegistryFn = func() (bool, error) { return false, nil }
+	t.Cleanup(func() { downloadAndUnzipRegistryFn = oldDownload })
+
+	out := &MockOutputWriter{}
+	svc := NewUpdateServiceWithDependencies(
+		&MockLocalPackagesProvider{
+			GetDataFunc: func(bool) local_packages_parser.LocalPackageRoot {
+				return local_packages_parser.LocalPackageRoot{Packages: []local_packages_parser.LocalPackageItem{{
+					SourceID: "npm:eslint",
+					Version:  "8.0.0",
+					Extras:   &local_packages_parser.PackageExtras{Pinned: true},
+				}}}
+			},
+		},
+		&MockRegistryProvider{
+			GetLatestVersionsFunc: func(string) (string, string) { return "9.0.0", "" },
+			GetDataFunc: func(bool) []registry_parser.RegistryItem {
+				return []registry_parser.RegistryItem{{
+					Version: "9.0.0",
+					Source:  registry_parser.RegistryItemSource{ID: "npm:eslint"},
+				}}
+			},
+		},
+		&MockUpdateChecker{
+			CheckIfUpdateIsAvailableFunc: func(string, string) (bool, string) { return true, "update" },
+		},
+		out,
+	)
+
+	assert.True(t, svc.UpdateAllPackages())
+	assert.False(t, updated)
+	joined := strings.Join(out.Output, "\n")
+	assert.Contains(t, joined, "pinned at 8.0.0")
+	assert.Contains(t, joined, "nvpm unpin npm:eslint")
+	assert.Contains(t, joined, "No packages updated")
 }
 
 func TestUpdateAllPackagesDoesNotInstallExtrasWhenUpToDate(t *testing.T) {

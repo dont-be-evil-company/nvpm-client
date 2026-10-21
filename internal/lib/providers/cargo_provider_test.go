@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 	"github.com/stretchr/testify/assert"
 )
 

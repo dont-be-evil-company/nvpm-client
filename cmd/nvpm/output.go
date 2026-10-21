@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
 )
 
 // GetOutputMode returns the current output mode from config

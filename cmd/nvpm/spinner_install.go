@@ -3,9 +3,9 @@ package nvpm
 import (
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 )
 
 // runNvpmInstallWithTreeSitterSpinnerPhases runs GitHub + Neovim + tree-sitter installs in two

@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
 	"github.com/spf13/cobra"
 )
 
@@ -132,6 +132,8 @@ Examples:
 			osExit(1)
 			return
 		}
+		lastAddSuccessCount = 0
+		lastAddFailureCount = 0
 		providers.SetMinReleaseAgePolicy(providers.MinReleaseAgePolicy{
 			MinAge: cfg.Flags.MinReleaseAge,
 			Force:  installForce,
@@ -254,6 +256,14 @@ Examples:
 						clearPendingAlwaysTrust(internalID)
 						continue
 					}
+					if err := rejectIfPinnedVersionChange(internalID, version, resolvedVersion); err != nil {
+						fmt.Printf("%s %v\n", IconClose(), err)
+						failureCount++
+						failures = append(failures, displayID)
+						clearPendingUpdateResolution(internalID)
+						clearPendingAlwaysTrust(internalID)
+						continue
+					}
 
 					registryItem := newRegistryParser().GetBySourceId(internalID)
 
@@ -303,6 +313,7 @@ Examples:
 						_ = local_packages_parser.MergePackageIntegrations(internalID, effectiveIntegrations)
 						persistUpdateResolutionAfterInstall(internalID)
 						persistAlwaysTrustAfterInstall(internalID)
+						persistPinAfterInstall(internalID)
 						fmt.Printf("%s Successfully installed %s@%s\n", IconCheck(), displayID, resolvedVersion)
 						printIntegrationReportLines(internalID, resolvedVersion, providers.ConsumeIntegrationReport(internalID, resolvedVersion))
 					} else {
@@ -358,6 +369,14 @@ Examples:
 				clearPendingAlwaysTrust(internalID)
 				continue
 			}
+			if err := rejectIfPinnedVersionChange(internalID, version, resolvedVersion); err != nil {
+				fmt.Printf("%s %v\n", IconClose(), err)
+				failureCount++
+				failures = append(failures, displayID)
+				clearPendingUpdateResolution(internalID)
+				clearPendingAlwaysTrust(internalID)
+				continue
+			}
 
 			registryItem := newRegistryParser().GetBySourceId(internalID)
 
@@ -407,6 +426,7 @@ Examples:
 				_ = local_packages_parser.MergePackageIntegrations(internalID, effectiveIntegrations)
 				persistUpdateResolutionAfterInstall(internalID)
 				persistAlwaysTrustAfterInstall(internalID)
+				persistPinAfterInstall(internalID)
 				fmt.Printf("%s Successfully installed %s@%s\n", IconCheck(), displayID, resolvedVersion)
 				printIntegrationReportLines(internalID, resolvedVersion, providers.ConsumeIntegrationReport(internalID, resolvedVersion))
 			} else {
@@ -420,6 +440,8 @@ Examples:
 
 		depSuccess := providers.ConsumeTreeSitterDependencyInstallSuccessCount()
 		totalSuccess := successCount + depSuccess
+		lastAddSuccessCount = successCount
+		lastAddFailureCount = failureCount
 
 		// Print summary
 		if ShouldUseJSONOutput() {
@@ -473,9 +495,10 @@ func init() {
 	addCmd.Flags().StringSliceVar(&installIntegrations, "integrate", nil, "run integration backends after install (e.g. --integrate neovim)")
 	addCmd.Flags().StringVar(&installExternalTreeSitterQueries, "external-treesitter-queries", "ask", "when Neovim integration needs optional query-only git repos from the registry: ask (default), always, never (overridden by NVPM_EXTERNAL_TREESITTER_QUERIES when this flag is left at default)")
 	addCmd.Flags().BoolVar(&installForce, "force", false, "bypass min-release-age safety checks")
+	addCmd.Flags().BoolVar(&installPin, "pin", false, "pin the installed version so later updates do not move it until nvpm unpin")
 	addCmd.Flags().BoolVar(&installAlwaysTrust, "always-trust", false, "persistently skip min-release-age for this package (stored in lock extras.always_trust)")
 	addCmd.Flags().BoolVar(&installNoAlwaysTrust, "no-always-trust", false, "clear extras.always_trust for this package")
-	addCmd.Flags().StringVar(&installUpdateResolution, "update-resolution", "", "git-only: override update-resolution for this package (e.g. always, release-age-gap:30d, branches:main,develop)")
+	addCmd.Flags().StringVar(&installUpdateResolution, "update-resolution", "", "git-only: override update-resolution for this package (e.g. always, never, prefer-release, release-age-gap:30d, branches:main,develop)")
 	addCmd.Flags().StringVar(&installPluginEditor, "plugin", "", "install as an editor plugin (under plugins/ instead of packages/); supported: neovim")
 	registerShowFilterFlag(addCmd)
 }

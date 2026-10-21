@@ -41,6 +41,9 @@ type PackageExtras struct {
 	UpdateResolution *LockUpdateResolution `json:"update_resolution,omitempty"`
 	// AlwaysTrust skips min-release-age for this package on add/up (persisted; unlike --force).
 	AlwaysTrust bool `json:"always_trust,omitempty"`
+	// Pinned holds version and commit. nvpm up, including --force, will not move the package
+	// until it is unpinned. Listing still reports the package as outdated when a newer candidate exists.
+	Pinned bool `json:"pinned,omitempty"`
 	// ExtraPackages records extras installed into this package's container after confirmation.
 	// Clients skip re-prompting while id/version/commit still match the registry extra_packages list.
 	ExtraPackages []ExtraPackagePin `json:"extra_packages,omitempty"`
@@ -680,7 +683,43 @@ func packageExtrasEmpty(e *PackageExtras) bool {
 		len(e.TreeSitterExternalQueries) == 0 &&
 		e.UpdateResolution == nil &&
 		!e.AlwaysTrust &&
+		!e.Pinned &&
 		len(e.ExtraPackages) == 0
+}
+
+// MergePackagePinned sets or clears extras.pinned for an installed package.
+func (lpp *LocalPackagesParser) MergePackagePinned(sourceID string, pinned bool) error {
+	sourceID = normalizePackageID(sourceID)
+	if sourceID == "" {
+		return nil
+	}
+	root := lpp.GetData(false)
+	for i := range root.Packages {
+		if root.Packages[i].SourceID != sourceID {
+			continue
+		}
+		if pinned {
+			if root.Packages[i].Extras == nil {
+				root.Packages[i].Extras = &PackageExtras{}
+			}
+			root.Packages[i].Extras.Pinned = true
+		} else if root.Packages[i].Extras != nil {
+			root.Packages[i].Extras.Pinned = false
+			if packageExtrasEmpty(root.Packages[i].Extras) {
+				root.Packages[i].Extras = nil
+			}
+		} else {
+			return nil
+		}
+		root.Schema = lockSchemaURL
+		localPackagesFile := lpp.fileManager.GetAppLocalPackagesFilePath()
+		jsonData, err := marshalIndent(root, "", "  ")
+		if err != nil {
+			return err
+		}
+		return lpp.fileManager.WriteFile(localPackagesFile, jsonData, 0644)
+	}
+	return fmt.Errorf("cannot pin: package %s is not in the lock file", sourceID)
 }
 
 func (lpp *LocalPackagesParser) IsNeovimPlugin(sourceID string) bool {
@@ -845,6 +884,10 @@ func MergePackageUpdateResolution(sourceId string, resolution *LockUpdateResolut
 
 func MergePackageAlwaysTrust(sourceId string, trust bool) error {
 	return globalParser.MergePackageAlwaysTrust(sourceId, trust)
+}
+
+func MergePackagePinned(sourceId string, pinned bool) error {
+	return globalParser.MergePackagePinned(sourceId, pinned)
 }
 
 func MergePackageExtraPackages(sourceId string, pins []ExtraPackagePin) error {

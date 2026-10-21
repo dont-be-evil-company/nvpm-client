@@ -9,12 +9,12 @@ import (
 
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/x/term"
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/semver"
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/semver"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 	"github.com/spf13/cobra"
 )
 
@@ -81,6 +81,10 @@ var lsCmd = &cobra.Command{
 By default, shows locally installed packages.
 Use --all to show all available packages from the registry.
 You can provide filter arguments to show only packages whose names match the filter strings (case-insensitive substring match).
+
+ls refreshes the registry when the local cache is older than --cache-max-age (or registry.cache-max-age in config.yaml; otherwise 6h).
+
+Pinned packages remain in this list and in --only-outdated. nvpm up will not move them until nvpm unpin.
 
 Optional filters (combinable): --only-outdated, --only-providers, --only-categories.`,
 	Args: cobra.ArbitraryArgs,
@@ -1192,9 +1196,9 @@ func (ls *ListService) formatInstalledPackagesMarkdown(filteredPackages []local_
 					_ = statusText
 				}
 
-				installedText := pkg.Version
+				installedText := withPinnedMarker(pkg, pkg.Version)
 				if providers.IsGitHostedSourceID(pkg.SourceID) {
-					installedText = formatInstalledGitDisplay(pkg.SourceID, pkg.Version, pkg.Commit, time.Now())
+					installedText = withPinnedMarker(pkg, formatInstalledGitDisplay(pkg.SourceID, pkg.Version, pkg.Commit, time.Now()))
 				}
 
 				markdown.WriteString(fmt.Sprintf("| %s | %s | %s |\n",
@@ -1218,6 +1222,9 @@ func (ls *ListService) formatInstalledPackagesMarkdown(filteredPackages []local_
 	if updateCount > 0 {
 		markdown.WriteString(fmt.Sprintf("\n- **%d** updates available", updateCount))
 		markdown.WriteString(fmt.Sprintf("\n- %s Use `nvpm update --all` to update all packages", IconLightbulbPlain()))
+		if pinnedOutdatedCount(filteredPackages) > 0 {
+			markdown.WriteString("\n- Pinned packages stay on the locked version until you `nvpm unpin` them, including `nvpm up -A --force`")
+		}
 	}
 	markdown.WriteString("\n")
 
@@ -1267,9 +1274,9 @@ func (ls *ListService) formatInstalledPackagesPlain(filteredPackages []local_pac
 			fmt.Fprintf(&b, "%s %s Packages:\n", IconDiamond(), strings.ToUpper(provider))
 			for _, pkg := range packages {
 				updateInfo, hasUpdate := ls.checkUpdateAvailability(pkg.SourceID, pkg.Version, pkg.Commit)
-				installedText := "v" + pkg.Version
+				installedText := withPinnedMarker(pkg, "v"+pkg.Version)
 				if providers.IsGitHostedSourceID(pkg.SourceID) {
-					installedText = formatInstalledGitDisplay(pkg.SourceID, pkg.Version, pkg.Commit, time.Now())
+					installedText = withPinnedMarker(pkg, formatInstalledGitDisplay(pkg.SourceID, pkg.Version, pkg.Commit, time.Now()))
 				}
 				fmt.Fprintf(&b, "   %s %s (%s) %s\n", getProviderIcon(provider), pkg.SourceID, installedText, updateInfo)
 				disc := ls.discoveryDisplayForInstalled(pkg.SourceID, pkg.Version, pkg.Commit)
@@ -1292,6 +1299,9 @@ func (ls *ListService) formatInstalledPackagesPlain(filteredPackages []local_pac
 	if updateCount > 0 {
 		fmt.Fprintf(&b, ", %d updates available", updateCount)
 		fmt.Fprintf(&b, "\n%s Use 'nvpm update --all' to update all packages", IconLightbulb())
+		if pinnedOutdatedCount(filteredPackages) > 0 {
+			fmt.Fprintf(&b, "\n%s Pinned packages stay on the locked version until you unpin them", IconLightbulb())
+		}
 	}
 	b.WriteString("\n")
 	return b.String()
@@ -1329,6 +1339,7 @@ func (ls *ListService) formatInstalledPackagesJSON(filteredPackages []local_pack
 			"provider":            provider,
 			"version":             pkg.Version,
 			"has_update":          hasUpdate,
+			"pinned":              packageIsPinned(pkg),
 			"available_versions":  disc.Available,
 			"discovered_versions": disc.Discovered,
 			"eligible_versions":   disc.Eligible,

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +71,7 @@ func TestParsePackageIDAndVersion(t *testing.T) {
 		{"basic cargo package", "pkg:cargo/ripgrep", "pkg:cargo/ripgrep", ""},
 
 		// NPM organization packages (these should NOT treat @org as version)
-		{"npm org package", "pkg:npm/@mistweaverco/kulala-fmt", "pkg:npm/@mistweaverco/kulala-fmt", ""},
+		{"npm org package", "pkg:npm/@dont-be-evil-company/kulala-fmt", "pkg:npm/@dont-be-evil-company/kulala-fmt", ""},
 		{"npm org package with @", "pkg:npm/@prisma/language-server", "pkg:npm/@prisma/language-server", ""},
 		{"npm org package with @", "pkg:npm/@tailwindcss/language-server", "pkg:npm/@tailwindcss/language-server", ""},
 
@@ -82,7 +82,7 @@ func TestParsePackageIDAndVersion(t *testing.T) {
 		{"cargo package with version", "pkg:cargo/ripgrep@13.0.0", "pkg:cargo/ripgrep", "13.0.0"},
 
 		// NPM organization packages with versions
-		{"npm org package with version", "pkg:npm/@mistweaverco/kulala-fmt@2.10.0", "pkg:npm/@mistweaverco/kulala-fmt", "2.10.0"},
+		{"npm org package with version", "pkg:npm/@dont-be-evil-company/kulala-fmt@2.10.0", "pkg:npm/@dont-be-evil-company/kulala-fmt", "2.10.0"},
 		{"npm org package with version", "pkg:npm/@prisma/language-server@6.14.0", "pkg:npm/@prisma/language-server", "6.14.0"},
 		{"npm org package with version", "pkg:npm/@tailwindcss/language-server@0.14.26", "pkg:npm/@tailwindcss/language-server", "0.14.26"},
 
@@ -96,7 +96,7 @@ func TestParsePackageIDAndVersion(t *testing.T) {
 		{"package with rc version", "pkg:npm/eslint@1.0.0-rc.1", "pkg:npm/eslint", "1.0.0-rc.1"},
 
 		// Edge cases
-		{"package with @ in name but no version", "pkg:npm/@mistweaverco/kulala-fmt", "pkg:npm/@mistweaverco/kulala-fmt", ""},
+		{"package with @ in name but no version", "pkg:npm/@dont-be-evil-company/kulala-fmt", "pkg:npm/@dont-be-evil-company/kulala-fmt", ""},
 		{"package with multiple @ symbols", "pkg:npm/@org@suborg/package@1.0.0", "pkg:npm/@org@suborg/package", "1.0.0"},
 		{"package with @ at end but no version", "pkg:npm/package@", "pkg:npm/package@", ""},
 	}

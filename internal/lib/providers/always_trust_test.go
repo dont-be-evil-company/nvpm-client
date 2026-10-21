@@ -35,7 +35,7 @@ func TestAlwaysTrustDoesNotBypassTagSHAMismatch(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 	require.NoError(t, RecordDiscovery(sourceID, FormatGitDiscoveryVersion("v1.1.0", oldCommit)))

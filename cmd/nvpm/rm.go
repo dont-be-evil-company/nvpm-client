@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 	"github.com/spf13/cobra"
 )
 

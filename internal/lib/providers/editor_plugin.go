@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 )
 
 const editorPluginCategory = "Plugin"

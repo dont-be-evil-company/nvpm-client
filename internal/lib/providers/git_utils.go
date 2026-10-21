@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 )
 
 // IsGitCommitHash checks if a string is a valid Git commit hash (40 hexadecimal characters)

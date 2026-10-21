@@ -46,6 +46,11 @@ func TestPreferBranchOverReleaseOrDefault(t *testing.T) {
 	assert.Equal(t, []string{"trunk", "main"}, got.Branches)
 
 	fc = FileConfig{}
+	fc.Git.UpdateResolution.PrefersBranchOverRelease.When.Kind = "never"
+	got = fc.PreferBranchOverReleaseOrDefault()
+	assert.Equal(t, PreferBranchWhenNever, got.Kind)
+
+	fc = FileConfig{}
 	fc.Git.UpdateResolution.PrefersBranchOverRelease.When.Kind = "release-age-gap"
 	fc.Git.UpdateResolution.PrefersBranchOverRelease.When.Gap = "30d"
 	got = fc.PreferBranchOverReleaseOrDefault()

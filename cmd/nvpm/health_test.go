@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
 	"github.com/stretchr/testify/assert"
 )
 

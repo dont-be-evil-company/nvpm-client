@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 )
 
 func TestCollectPackageExtraDetails_TreeSitterAndRequires(t *testing.T) {

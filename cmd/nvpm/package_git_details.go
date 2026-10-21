@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 )
 
 // showGitDetailsProgress controls spinners while show/info fetches live git metadata.
@@ -187,6 +187,8 @@ func describeUpdateResolution(policy providers.PreferBranchPolicy, sourceID stri
 	switch policy.Kind {
 	case config.PreferBranchWhenAlways:
 		return fmt.Sprintf("%s: always prefer branch tips (%s)", source, branches)
+	case config.PreferBranchWhenNever:
+		return fmt.Sprintf("%s: always prefer releases and tags over branches (%s used only when no tag exists)", source, branches)
 	default:
 		return fmt.Sprintf("%s: prefer branch (%s) when latest tag/release is ≥ %s old and branch is newer",
 			source, branches, formatInDuration(policy.Gap))

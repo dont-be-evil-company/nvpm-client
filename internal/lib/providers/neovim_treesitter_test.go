@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/treesitterquery"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/treesitterquery"
 )
 
 func writeQueryFile(t *testing.T, dir, name, content string) {

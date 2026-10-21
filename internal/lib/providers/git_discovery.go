@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/shell_out"
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/shell_out"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 )
 
 var gitDiscoveryShellOutCapture = shell_out.ShellOutCapture
@@ -503,7 +503,7 @@ func DiscoverGitRemoteLatest(sourceID, installedVersion string) (GitRemoteLatest
 		return GitRemoteLatestResult{}, err
 	}
 
-	policy := GetPreferBranchPolicy()
+	policy := PreferBranchPolicyForSourceID(sourceID)
 	now := time.Now()
 
 	var (
@@ -524,7 +524,7 @@ func DiscoverGitRemoteLatest(sourceID, installedVersion string) (GitRemoteLatest
 	branchName, branchCommit, hasBranch := resolvePreferredBranchTip(sourceID, repoURL, policy.Branches)
 
 	var tagTime, branchTime time.Time
-	needDates := hasTag && hasBranch && policy.Kind != config.PreferBranchWhenAlways
+	needDates := hasTag && hasBranch && policy.Kind == config.PreferBranchWhenReleaseAgeGap
 	if needDates {
 		if t, dateErr := fetchGitCommitDateFn(sourceID, tagCommit); dateErr == nil {
 			tagTime = t

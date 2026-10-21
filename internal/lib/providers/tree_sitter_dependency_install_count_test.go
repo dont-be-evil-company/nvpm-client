@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 )
 
 func TestNestedTreeSitterExternalQueryPreflight_AllowsWhenNestedAndNeovim(t *testing.T) {

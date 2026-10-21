@@ -1,4 +1,4 @@
-module github.com/mistweaverco/nvpm-client
+module github.com/dont-be-evil-company/nvpm-client
 
 go 1.25.0
 

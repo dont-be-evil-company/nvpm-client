@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
 )
 
 // ToConfig converts lock update_resolution to runtime config policy.
@@ -33,7 +33,7 @@ func (l *LockUpdateResolution) ToConfig() config.PreferBranchOverRelease {
 		}
 	}
 	kind := config.PreferBranchWhenKind(strings.TrimSpace(p.When.Kind))
-	if kind == config.PreferBranchWhenAlways || kind == config.PreferBranchWhenReleaseAgeGap {
+	if kind == config.PreferBranchWhenAlways || kind == config.PreferBranchWhenReleaseAgeGap || kind == config.PreferBranchWhenNever {
 		out.Kind = kind
 	}
 	if kind == config.PreferBranchWhenReleaseAgeGap {

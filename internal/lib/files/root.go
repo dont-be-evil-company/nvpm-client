@@ -10,10 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -477,8 +478,9 @@ func DownloadWithCache(url string, cachePath string, maxAge time.Duration) error
 
 type nvpmConfigFile struct {
 	Registry struct {
-		URLs        []string `yaml:"urls"`
-		CacheMaxAge string   `yaml:"cacheMaxAge"`
+		URLs             []string `yaml:"urls"`
+		CacheMaxAge      string   `yaml:"cache-max-age"`
+		CacheMaxAgeCamel string   `yaml:"cacheMaxAge"`
 	} `yaml:"registry"`
 
 	Paths struct {
@@ -538,17 +540,40 @@ func readNvpmConfigFile() (nvpmConfigFile, bool) {
 	return cfg, true
 }
 
+// registryCacheMaxAgeOverride is set by the CLI after flags and config.yaml are resolved.
+// Nil means callers that do not go through cobra should read config.yaml themselves.
+var registryCacheMaxAgeOverride *time.Duration
+
+// SetRegistryCacheMaxAgeOverride forces the registry zip freshness window.
+// A zero duration means the cache is always stale.
+func SetRegistryCacheMaxAgeOverride(d time.Duration) {
+	if d < 0 {
+		d = 0
+	}
+	v := d
+	registryCacheMaxAgeOverride = &v
+}
+
+// ClearRegistryCacheMaxAgeOverride removes a CLI override so config.yaml is used again.
+func ClearRegistryCacheMaxAgeOverride() {
+	registryCacheMaxAgeOverride = nil
+}
+
 func getRegistryCacheMaxAge() time.Duration {
+	if registryCacheMaxAgeOverride != nil {
+		return *registryCacheMaxAgeOverride
+	}
 	// Default is intentionally short to reduce the chance of users seeing stale registry data
 	// without having to manually `nvpm sync registry`.
 	maxAge := 6 * time.Hour
 
 	if cfg, ok := readNvpmConfigFile(); ok {
-		if raw := strings.TrimSpace(cfg.Registry.CacheMaxAge); raw != "" {
-			if parsed, err := time.ParseDuration(raw); err == nil {
-				if parsed < 0 {
-					return 0
-				}
+		raw := strings.TrimSpace(cfg.Registry.CacheMaxAge)
+		if raw == "" {
+			raw = strings.TrimSpace(cfg.Registry.CacheMaxAgeCamel)
+		}
+		if raw != "" {
+			if parsed, err := parseRegistryCacheMaxAge(raw); err == nil {
 				return parsed
 			}
 		}
@@ -557,8 +582,31 @@ func getRegistryCacheMaxAge() time.Duration {
 	return maxAge
 }
 
+// parseRegistryCacheMaxAge accepts Go durations and a day unit (7d), including 0.
+func parseRegistryCacheMaxAge(raw string) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, fmt.Errorf("empty duration")
+	}
+	if raw == "0" {
+		return 0, nil
+	}
+	if strings.HasSuffix(raw, "d") {
+		n, err := strconv.Atoi(strings.TrimSuffix(raw, "d"))
+		if err != nil || n < 0 {
+			return 0, fmt.Errorf("invalid duration %q", raw)
+		}
+		return time.Duration(n) * 24 * time.Hour, nil
+	}
+	parsed, err := time.ParseDuration(raw)
+	if err != nil || parsed < 0 {
+		return 0, fmt.Errorf("invalid duration %q", raw)
+	}
+	return parsed, nil
+}
+
 func defaultRegistryURL() string {
-	return "https://github.com/mistweaverco/nvpm-registry/releases/latest/download/nvpm-registry.json.zip"
+	return "https://github.com/dont-be-evil-company/nvpm-registry/releases/latest/download/nvpm-registry.json.zip"
 }
 
 func splitRegistryURLs(raw string) []string {

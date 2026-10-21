@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/shell_out"
-	"github.com/mistweaverco/nvpm-client/internal/lib/treesitterdeps"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/shell_out"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/treesitterdeps"
 )
 
 // IsTreeSitterParserCategory is true for curated tree-sitter grammar packages.

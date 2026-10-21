@@ -1,6 +1,6 @@
 package nvpm
 
-import "github.com/mistweaverco/nvpm-client/internal/lib/semver"
+import "github.com/dont-be-evil-company/nvpm-client/internal/lib/semver"
 
 // chooseBestRemoteVersion picks the appropriate remote version given the
 // current local version, a stable version (if any) and a prerelease version

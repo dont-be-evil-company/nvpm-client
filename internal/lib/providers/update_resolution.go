@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 )
 
 // pendingUpdateResolution holds per-package overrides set by add/up before install.
@@ -43,6 +43,7 @@ func PreferBranchPolicyForSourceID(sourceID string) PreferBranchPolicy {
 //
 // Supported forms:
 //   - always
+//   - never (alias: prefer-release) - always prefer tags/releases over branches
 //   - release-age-gap
 //   - release-age-gap:30d
 //   - branches:main,develop
@@ -67,6 +68,10 @@ func ParseUpdateResolutionFlag(raw string) (config.PreferBranchOverRelease, erro
 		}
 		if strings.EqualFold(seg, "always") {
 			out.Kind = config.PreferBranchWhenAlways
+			continue
+		}
+		if strings.EqualFold(seg, "never") || strings.EqualFold(seg, "prefer-release") {
+			out.Kind = config.PreferBranchWhenNever
 			continue
 		}
 		if strings.EqualFold(seg, "release-age-gap") {
@@ -104,8 +109,8 @@ func ParseUpdateResolutionFlag(raw string) (config.PreferBranchOverRelease, erro
 		}
 		return config.PreferBranchOverRelease{}, fmt.Errorf("unknown update-resolution segment %q", seg)
 	}
-	if out.Kind != config.PreferBranchWhenAlways && out.Kind != config.PreferBranchWhenReleaseAgeGap {
-		return config.PreferBranchOverRelease{}, fmt.Errorf("update-resolution must include always or release-age-gap")
+	if out.Kind != config.PreferBranchWhenAlways && out.Kind != config.PreferBranchWhenReleaseAgeGap && out.Kind != config.PreferBranchWhenNever {
+		return config.PreferBranchOverRelease{}, fmt.Errorf("update-resolution must include always, release-age-gap, or never")
 	}
 	return out, nil
 }

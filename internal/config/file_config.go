@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,6 +15,9 @@ type PreferBranchWhenKind string
 const (
 	PreferBranchWhenAlways        PreferBranchWhenKind = "always"
 	PreferBranchWhenReleaseAgeGap PreferBranchWhenKind = "release-age-gap"
+	// PreferBranchWhenNever always keeps the latest tag or release when one exists.
+	// A branch is used only when no tag exists.
+	PreferBranchWhenNever PreferBranchWhenKind = "never"
 )
 
 // PreferBranchOverRelease is the resolved policy for git update resolution.
@@ -124,7 +127,7 @@ func (fc FileConfig) PreferBranchOverReleaseOrDefault() PreferBranchOverRelease 
 	if kind == "" {
 		return def
 	}
-	if kind != PreferBranchWhenAlways && kind != PreferBranchWhenReleaseAgeGap {
+	if kind != PreferBranchWhenAlways && kind != PreferBranchWhenReleaseAgeGap && kind != PreferBranchWhenNever {
 		return def
 	}
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 )
 
 var semverTagRe = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)`)

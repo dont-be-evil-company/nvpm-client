@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
 )
 
 // RemoteLatestEntry caches the last remotely discovered latest version for a

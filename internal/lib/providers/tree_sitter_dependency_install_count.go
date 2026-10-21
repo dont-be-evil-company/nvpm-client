@@ -3,7 +3,7 @@ package providers
 import (
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 )
 
 // treeSitterDependencyInstallSuccessCount counts successful Install() calls made from

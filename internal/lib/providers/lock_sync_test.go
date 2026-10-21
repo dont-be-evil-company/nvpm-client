@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -157,7 +157,7 @@ func TestEnforceGitTagSHAOrRejectLockedCommitIsSourceScoped(t *testing.T) {
 	ClearLastError()
 
 	parent := "github:nvim-treesitter/nvim-treesitter"
-	dep := "github:mistweaverco/floaterm.nvim"
+	dep := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 	require.NoError(t, RecordDiscovery(dep, FormatGitDiscoveryVersion("v1.1.0", oldCommit)))

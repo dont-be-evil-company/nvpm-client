@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
 )
 
 // PreferBranchPolicy mirrors config.PreferBranchOverRelease for use during discovery/install.
@@ -106,6 +106,12 @@ func DecidePreferBranch(
 	}
 	if policy.Kind == config.PreferBranchWhenAlways {
 		return PreferBranchDecision{UseBranch: true, Reason: "always"}
+	}
+	if policy.Kind == config.PreferBranchWhenNever {
+		if hasTag {
+			return PreferBranchDecision{UseBranch: false, Reason: "prefer release"}
+		}
+		return PreferBranchDecision{UseBranch: true, Reason: "no tag"}
 	}
 	// release-age-gap
 	if !hasTag {

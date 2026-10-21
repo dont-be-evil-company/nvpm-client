@@ -12,7 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/mattn/go-isatty"
-	"github.com/mistweaverco/nvpm-client/internal/lib/log"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/log"
 )
 
 var spinnerDepth int32

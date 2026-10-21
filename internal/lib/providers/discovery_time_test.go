@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -95,7 +95,7 @@ func TestGitCommitStillNeedsUpdateUsesLocalRemoteLatestOnly(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	installed := "301ea764263d0c1a42a8fc2985047c0012347401"
 	stale := "19198f485082474248b5919f6aa0e473a2dd9726"
 	past := time.Now().Add(-time.Hour)

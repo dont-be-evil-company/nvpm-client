@@ -41,7 +41,7 @@ linters, and formatters and more.
 - *Provider*: A provider is a package source,
     e.g., `npm`, `pypi`, `golang`, etc.
 - *Package ID*: A package ID is a unique identifier for a package,
-    e.g., `npm:@mistweavercokulala-ls@0.1.0`.
+    e.g., `npm:@dont-be-evil-companykulala-ls@0.1.0`.
 - *`nvpm` Registry*: The `nvpm` Registry is a registry of
     available packages that can be installed via `nvpm`.
 - *Terminal User Interface* (TUI): A text-based user interface
@@ -64,7 +64,7 @@ E.g. if you want to install `npm` packages,
 you need to have `npm` installed.
 
 For the packages to work in Neovim, you either need to have
-[`nvpm.nvim`](https://github.com/mistweaverco/nvpm.nvim) installed,
+[`nvpm.nvim`](https://github.com/dont-be-evil-company/nvpm.nvim) installed,
 or source the environment setup in your shell.
 
 ```sh
@@ -221,7 +221,7 @@ You can run `nvpm --help` to see the available CLI options.
 
 ```sh
 nvpm show \
-  npm:@mistweavercokulala-ls@0.1.0 \
+  npm:@dont-be-evil-companykulala-ls@0.1.0 \
   pypi:black \
   golang:golangci-lint
 ```
@@ -232,7 +232,7 @@ nvpm show \
 
 ```sh
 nvpm add \
-  npm:@mistweaverco/kulala-fmt \
+  npm:@dont-be-evil-company/kulala-fmt \
   pypi:black \
   golang:golangci-lint
 ```
@@ -250,19 +250,41 @@ This is especially useful for packages that are not yet available in the registr
 >
 > `nvpm up package@version` will fail with an error message,
 > telling you to either use `nvpm add package@version` or `nvpm set package@version`.
+> To keep that version across later updates, pin it (see below).
 
 ```sh
-nvpm add npm:@mistweavercokulala-cli@0.1.0
+nvpm add npm:@dont-be-evil-companykulala-cli@0.1.0
 ```
 
 Also accepts multiple packages at once:
 
 ```sh
 nvpm add \
-  npm:@mistweavercokulala-cli@0.1.0 \
+  npm:@dont-be-evil-companykulala-cli@0.1.0 \
   pypi:black@22.3.0 \
   golang:golangci-lint@v1.52.2
 ```
+
+`nvpm add pkg@version --pin` installs that version and pins it in one step.
+
+#### `nvpm pin` / `nvpm unpin`
+
+`pin` holds a package at the version recorded in `nvpm-lock.json`.
+`nvpm up`, including `nvpm up -A --force`, will not move a pinned package.
+`nvpm ls` still lists it as installed and, when a newer candidate exists, as outdated.
+Unpin it before an update should take it to the latest version.
+
+```sh
+nvpm pin npm:eslint
+nvpm pin npm:eslint@8.0.0
+nvpm unpin npm:eslint
+```
+
+`nvpm pin npm:eslint` pins whatever is already installed.
+`nvpm pin npm:eslint@8.0.0` installs that version, then pins it.
+The pin is stored as `extras.pinned` in `nvpm-lock.json` (see `schemas/lock.schema.json`).
+`nvpm add` of a different version fails until you unpin or move the pin with `nvpm pin pkg@version`.
+`nvpm sync packages` still installs the locked version.
 
 #### `nvpm sync`
 
@@ -284,8 +306,9 @@ with the latest data from the `nvpm` Registry.
 nvpm sync registry
 ```
 
-The registry data is cached locally,
-but with the `sync registry` command you can force an update.
+The registry data is cached locally.
+`nvpm ls` and `nvpm ls -A` download it again when the cache is older than the
+configured max age. `nvpm sync registry` always forces a download.
 
 You can control how long `nvpm` considers the downloaded registry zip "fresh":
 
@@ -304,7 +327,7 @@ registry:
   cache-max-age: 6h
   min-release-age: 7d
   urls:
-    - https://github.com/mistweaverco/nvpm-registry/releases/latest/download/nvpm-registry.json.zip
+    - https://github.com/dont-be-evil-company/nvpm-registry/releases/latest/download/nvpm-registry.json.zip
 git:
   update-resolution:
     prefers-branch-over-release:
@@ -324,6 +347,8 @@ git-hosted packages use a branch tip instead of a stale tag/release as “latest
 Registry packages keep the curated registry version. The default (even without
 a configuration file) is `release-age-gap` with `gap: 60d` and branches `main`, `master`.
 Use `kind: always` to ignore tags/releases entirely for those non-registry packages.
+Use `kind: never` to always prefer the latest tag or release when one exists.
+A branch is used only when no tag exists. `prefer-release` is a CLI alias for `never`.
 
 A JSON Schema is provided at `schemas/config.schema.json`.
 
@@ -334,6 +359,10 @@ A JSON Schema is provided at `schemas/config.schema.json`.
 ```sh
 nvpm ls
 ```
+
+`ls` refreshes the local registry when it is older than `--cache-max-age`,
+`registry.cache-max-age` in `config.yaml`, or 6 hours when neither is set.
+`0` refreshes on every `ls`. Passing `--cache-max-age` overrides the config file.
 
 or with the `--all`/`-A` flag, list all available packages from the registry.
 
@@ -372,6 +401,11 @@ nvpm ls --only-always-trusted
 nvpm ls --filter 'categories:*tree*' --filter 'provider:github'
 ```
 
+Pinned packages stay in the installed list and in `--only-outdated`.
+The installed version is marked `pinned`. JSON output includes `"pinned": true`
+and still sets `"has_update": true` when a newer candidate exists.
+`nvpm up` will not install that update until `nvpm unpin`.
+
 Installed list output uses three columns: **Package ID**, **Installed**, and **Available**.
 The Available column shows install candidates (tags, branches, or `semver` versions) that
 have passed local discovery, or `in X days/hours` when `--min-release-age` is still
@@ -394,6 +428,7 @@ also includes:
 - **Discovery** - remote commit date vs when you first recorded the version locally
 - **Alerts** - force-moved tags/releases
 - **Always trust** - whether `extras.always_trust` skips `min-release-age` for the package
+- **Pinned** - whether `extras.pinned` holds the locked version against `nvpm up`
 
 ```sh
 nvpm show github:folke/ts-comments.nvim
@@ -404,8 +439,12 @@ Per-package git update policy can be overridden on install/update:
 ```sh
 nvpm add github:user/repo --update-resolution release-age-gap:30d
 nvpm add github:user/repo --update-resolution always
+nvpm add github:user/repo --update-resolution never
+nvpm up github:user/repo --update-resolution prefer-release
 nvpm up github:user/repo --update-resolution branches:main,develop;release-age-gap:60d
 ```
+
+`never` and `prefer-release` always choose the latest tag or release when one exists.
 
 Overrides are stored in `nvpm-lock.json` under `extras.update_resolution` (see
 `schemas/lock.schema.json`).
@@ -420,6 +459,41 @@ nvpm add npm:eslint --always-trust
 nvpm up npm:eslint --no-always-trust
 ```
 
+#### `nvpm diff`
+
+`diff` shows what changed in a package since a base version. The base defaults to
+the installed commit for git packages, or the installed version otherwise. The
+other side is the latest candidate `nvpm up` would select. A pin does not hide
+the diff, so you can see what unpinning and updating would change.
+
+```sh
+nvpm diff github:owner/repo
+nvpm diff github:owner/repo v1.2.3
+nvpm diff github:owner/repo@v1.2.3
+nvpm diff npm:eslint github:owner/repo
+nvpm diff github:owner/repo --stat
+```
+
+Git-hosted packages (`github`, `gitlab`, `codeberg`) with a local checkout print
+a file diff. `-s` / `--stat` prints only the diffstat. Other providers print the
+installed and latest versions, because they have no local git history.
+`--output json` includes `base`, `head`, `commits`, and `diff`.
+
+#### `nvpm tui`
+
+`tui` opens a terminal UI for the same package actions as the CLI: install,
+update, update all, remove, pin, unpin, diff, details, and sync. The list can
+be searched, filtered (installed, outdated, pinned, all), and sorted (name,
+provider, status).
+
+```sh
+nvpm tui
+```
+
+Update and update-all skip pinned packages, matching `nvpm up -A --force`.
+Install, update, remove, and sync leave the UI while they run so the usual
+prompts still work. `nvpm env` and `nvpm completion` stay command-line only.
+
 #### Filter DSL
 
 `--filter` is available on `ls`, `show`, `add`, `up`, and `rm`. Repeat the flag for
@@ -430,13 +504,13 @@ AND semantics. Each value is `[.]path:value` against the package's `show` JSON f
 - Paths are dot-separated; arrays match if **any** element matches the remainder
 - The first `:` separates path from value (so `package_id:github:owner/repo` works)
 - Values are case-insensitive; `*` and `?` are globs (`*` matches any characters, including `/` and `:`); without wildcards, match is exact
-- Booleans: `always_trust:true` / `false`
+- Booleans: `always_trust:true` / `false`, `pinned:true` / `false`
 - Missing path → no match
 
 ```sh
 nvpm ls --filter '.categories:*tree*'
-nvpm ls --filter 'package_id:github:mistweaverco*'
-nvpm show mistweaver --filter 'package_id:*mistweaverco/*'
+nvpm ls --filter 'package_id:github:@dont-be-evil-company**'
+nvpm show mistweaver --filter 'package_id:*dont-be-evil-company/*'
 nvpm up --all --filter 'provider:npm'
 nvpm rm eslint --filter 'categories:LSP'
 ```
@@ -447,7 +521,7 @@ nvpm rm eslint --filter 'categories:LSP'
 
 ```sh
 nvpm up \
-  npm:@mistweavercokulala-ls \
+  npm:@dont-be-evil-companykulala-ls \
   pypi:black@latest
 ```
 
@@ -483,7 +557,7 @@ GH_TOKEN=$(gh auth token) nvpm up --self
 
 ```sh
 nvpm remove \
-  npm:@mistweavercokulala-ls \
+  npm:@dont-be-evil-companykulala-ls \
   pypi:black
 ```
 
@@ -563,7 +637,7 @@ nvpm add --plugin neovim github:owner/custom.nvim  # force Neovim plugin install
 nvpm ls --only-plugins
 ```
 
-Runtime loading uses [`nvpm.nvim`](https://github.com/mistweaverco/nvpm.nvim) with `lazy.nvim`-compatible specs.
+Runtime loading uses [`nvpm.nvim`](https://github.com/dont-be-evil-company/nvpm.nvim) with `lazy.nvim`-compatible specs.
 
 ## Supported Providers
 
@@ -611,7 +685,7 @@ Runtime loading uses [`nvpm.nvim`](https://github.com/mistweaverco/nvpm.nvim) wi
 [badge-golang]: assets/badge-golang.svg
 [badge-development-status]: assets/badge-development-status.svg
 [badge-our-manifesto]: assets/badge-our-manifesto.svg
-[badge-latest-release]: https://img.shields.io/github/v/release/mistweaverco/nvpm-client?style=for-the-badge
+[badge-latest-release]: https://img.shields.io/github/v/release/dont-be-evil-company/nvpm-client?style=for-the-badge
 [badge-discord]: https://mistweaverco.com/assets/badges/discord.svg
 [badge-irc]: https://mistweaverco.com/assets/badges/irc.svg
 [discord]: https://mistweaverco.com/discord
@@ -621,9 +695,9 @@ Runtime loading uses [`nvpm.nvim`](https://github.com/mistweaverco/nvpm.nvim) wi
 [registry-website]: https://registry.nvpm.dev
 [golang-website]: https://golang.org
 [website]: https://nvpm.dev
-[contributors]: https://github.com/mistweaverco/nvpm-client/graphs/contributors
+[contributors]: https://github.com/dont-be-evil-company/nvpm-client/graphs/contributors
 [swahili]: https://en.wikipedia.org/wiki/Swahili_language
-[latest-release]: https://github.com/mistweaverco/nvpm-client/releases/latest
+[latest-release]: https://github.com/dont-be-evil-company/nvpm-client/releases/latest
 [download-website]: https://nvpm.dev/#download
-[nvpm-registry]: https://github.com/mistweaverco/nvpm-registry
-[nvpm.nvim]: https://github.com/mistweaverco/nvpm.nvim
+[nvpm-registry]: https://github.com/dont-be-evil-company/nvpm-registry
+[nvpm.nvim]: https://github.com/dont-be-evil-company/nvpm.nvim

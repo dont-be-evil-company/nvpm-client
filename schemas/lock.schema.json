@@ -148,7 +148,7 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "enum": ["always", "release-age-gap"]
+                            "enum": ["always", "release-age-gap", "never"]
                           },
                           "gap": {
                             "type": "string",
@@ -163,6 +163,10 @@
               "always_trust": {
                 "type": "boolean",
                 "description": "When true, skip min-release-age for this package on install/update. Unlike --force, this persists in the lock file."
+              },
+              "pinned": {
+                "type": "boolean",
+                "description": "When true, nvpm up will not change version or commit, including nvpm up -A --force. The package is still listed as outdated when a newer candidate exists. Clear with nvpm unpin."
               },
               "extra_packages": {
                 "type": "array",

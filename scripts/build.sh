@@ -6,12 +6,12 @@ build_wrapper() {
   if [ "$1" == "windows" ]; then
     windows_file_extension=".exe"
   fi
-  GOOS=$1 GOARCH=$2 CGO_ENABLED=0 go build -ldflags "-X 'github.com/mistweaverco/nvpm-client/internal/lib/version.VERSION=${VERSION}'" -o "dist/nvpm-$1-$2$windows_file_extension"
+  GOOS=$1 GOARCH=$2 CGO_ENABLED=0 go build -ldflags "-X 'github.com/dont-be-evil-company/nvpm-client/internal/lib/version.VERSION=${VERSION}'" -o "dist/nvpm-$1-$2$windows_file_extension"
 }
 
 build_linux_debug() {
   echo "Building for linux debug version $VERSION"
-  GOOS=linux CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "-X 'github.com/mistweaverco/nvpm-client/lib/internal/version.VERSION=${VERSION}'" -o dist/nvpm-linux-debug
+  GOOS=linux CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "-X 'github.com/dont-be-evil-company/nvpm-client/lib/internal/version.VERSION=${VERSION}'" -o dist/nvpm-linux-debug
 }
 
 build_linux_arm64() {

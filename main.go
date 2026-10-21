@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/mistweaverco/nvpm-client/cmd/nvpm"
+	"github.com/dont-be-evil-company/nvpm-client/cmd/nvpm"
 )
 
 func main() {

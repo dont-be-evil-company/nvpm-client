@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,6 +48,24 @@ func TestDecidePreferBranchReleaseAgeGap(t *testing.T) {
 	d = DecidePreferBranch(policy, now, true, time.Time{}, true, branchNew)
 	assert.False(t, d.UseBranch)
 	assert.Equal(t, "missing upstream dates", d.Reason)
+
+	d = DecidePreferBranch(policy, now, false, time.Time{}, true, branchNew)
+	assert.True(t, d.UseBranch)
+	assert.Equal(t, "no tag", d.Reason)
+}
+
+func TestDecidePreferBranchNever(t *testing.T) {
+	policy := PreferBranchPolicy{
+		Branches: []string{"main"},
+		Kind:     config.PreferBranchWhenNever,
+	}
+	now := time.Now()
+	branchNew := now
+	tagOld := now.Add(-90 * 24 * time.Hour)
+
+	d := DecidePreferBranch(policy, now, true, tagOld, true, branchNew)
+	assert.False(t, d.UseBranch)
+	assert.Equal(t, "prefer release", d.Reason)
 
 	d = DecidePreferBranch(policy, now, false, time.Time{}, true, branchNew)
 	assert.True(t, d.UseBranch)

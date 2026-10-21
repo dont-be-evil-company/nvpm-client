@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/config"
-	"github.com/mistweaverco/nvpm-client/internal/lib/files"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -535,6 +535,51 @@ func TestListInstalledPackagesAdvancedFilters(t *testing.T) {
 	})
 	assert.Contains(t, out5, "npm:pkg-a")
 	assert.NotContains(t, out5, "pypi:pkg-b")
+}
+
+func TestListInstalledPinnedStillOutdated(t *testing.T) {
+	mockLocal := &MockLocalPackagesProvider{
+		GetDataFunc: func(bool) local_packages_parser.LocalPackageRoot {
+			return local_packages_parser.LocalPackageRoot{
+				Packages: []local_packages_parser.LocalPackageItem{{
+					SourceID: "npm:eslint",
+					Version:  "8.0.0",
+					Extras:   &local_packages_parser.PackageExtras{Pinned: true},
+				}},
+			}
+		},
+	}
+	mockRegistry := &MockRegistryProvider{
+		GetLatestVersionsFunc: func(string) (string, string) { return "9.0.0", "" },
+		GetDataFunc: func(bool) []registry_parser.RegistryItem {
+			return []registry_parser.RegistryItem{{
+				Version: "9.0.0",
+				Source:  registry_parser.RegistryItemSource{ID: "npm:eslint"},
+			}}
+		},
+	}
+	mockUpdate := &MockUpdateChecker{
+		CheckIfUpdateIsAvailableFunc: func(current, latest string) (bool, string) {
+			return current != latest, ""
+		},
+	}
+	svc := NewListServiceWithDependencies(mockLocal, mockRegistry, mockUpdate, &MockFileDownloader{
+		DownloadAndUnzipRegistryFunc: func() (bool, error) { return false, nil },
+	})
+
+	out := captureOutputWithMode(t, func() {
+		svc.ListInstalledPackages(ListQueryOptions{OnlyOutdated: true})
+	}, config.OutputModeJSON)
+	assert.Contains(t, out, "npm:eslint")
+	assert.Contains(t, out, `"pinned": true`)
+	assert.Contains(t, out, `"has_update": true`)
+
+	plain := captureOutput(t, func() {
+		svc.ListInstalledPackages(ListQueryOptions{OnlyOutdated: true})
+	})
+	assert.Contains(t, plain, "npm:eslint")
+	assert.Contains(t, plain, "(pinned)")
+	assert.Contains(t, plain, "Update available")
 }
 
 func TestListInstalledPackagesOnlyAlwaysTrusted(t *testing.T) {

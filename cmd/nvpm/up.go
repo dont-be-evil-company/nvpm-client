@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/githubauth"
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/semver"
-	"github.com/mistweaverco/nvpm-client/internal/lib/spinnerutil"
-	"github.com/mistweaverco/nvpm-client/internal/lib/version"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/githubauth"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/semver"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/version"
 	"github.com/spf13/cobra"
 )
 
@@ -178,8 +178,9 @@ Examples:
   nvpm up --all (update all installed packages)
   nvpm up --self (update nvpm itself to the latest version)
 
-Note: pinned versions like pkg@v1.2.3 are not supported by up.
-Use nvpm add / nvpm set to install or switch to a specific version.`,
+Note: nvpm up pkg@version is not supported.
+Use nvpm add / nvpm set to install or switch to a specific version.
+Use nvpm pin to hold a version. Pinned packages are skipped by nvpm up, including nvpm up -A --force, until nvpm unpin.`,
 	Args: cobra.MinimumNArgs(0), // Allow no args if --all or --self is used
 	// Enable shell completion for installed package IDs only.
 	ValidArgsFunction: installedPackageIDCompletion,
@@ -308,6 +309,7 @@ Use nvpm add / nvpm set to install or switch to a specific version.`,
 			_, version := parsePackageIDAndVersion(pinned)
 			service.output.Printf("%s Skipping %s: `nvpm up` cannot target a specific version (%s).\n", IconAlert(), pinned, version)
 			service.output.Printf("  To set a specific version, use `nvpm add %s` or `nvpm set %s`.\n", pinned, pinned)
+			service.output.Printf("  To hold that version across updates, use `nvpm pin %s`.\n", pinned)
 		}
 
 		filters := getShowFilters(cmd)
@@ -341,6 +343,7 @@ Use nvpm add / nvpm set to install or switch to a specific version.`,
 		failedCount := 0
 		waitingCount := 0
 		skippedUpToDate := 0
+		skippedPinnedHold := 0
 		installedByID := map[string]local_packages_parser.LocalPackageItem{}
 		for _, pkg := range service.localPackages.GetData(true).Packages {
 			installedByID[pkg.SourceID] = pkg
@@ -349,6 +352,14 @@ Use nvpm add / nvpm set to install or switch to a specific version.`,
 		for idx := range internalIDs {
 			internalID := internalIDs[idx]
 			displayID := displayIDs[idx]
+
+			if pkg, ok := installedByID[internalID]; ok && packageIsPinned(pkg) {
+				service.output.Printf("%s Skipping %s: pinned at %s. Unpin with `nvpm unpin %s` before updating.\n", IconAlert(), displayID, pkg.Version, displayID)
+				skippedPinnedHold++
+				clearPendingUpdateResolution(internalID)
+				clearPendingAlwaysTrust(internalID)
+				continue
+			}
 
 			if pkg, ok := installedByID[internalID]; ok {
 				if !service.checkUpdateAvailability(internalID, pkg.Version, pkg.Commit) {
@@ -419,6 +430,9 @@ Use nvpm add / nvpm set to install or switch to a specific version.`,
 		if waitingCount > 0 {
 			service.output.Printf("  Skipped (waiting for min-release-age): %d\n", waitingCount)
 		}
+		if skippedPinnedHold > 0 {
+			service.output.Printf("  Skipped (pinned): %d\n", skippedPinnedHold)
+		}
 		service.output.Printf("  Failed to update: %d\n", failedCount)
 
 		if allSuccess {
@@ -426,6 +440,8 @@ Use nvpm add / nvpm set to install or switch to a specific version.`,
 				service.output.Printf("All packages updated successfully!\n")
 			} else if waitingCount > 0 {
 				service.output.Printf("No packages updated - waiting for min-release-age.\n")
+			} else if skippedPinnedHold > 0 {
+				service.output.Printf("No packages updated. Unpin pinned packages before updating them.\n")
 			} else if skippedUpToDate > 0 {
 				service.output.Printf("All packages are up to date.\n")
 			}
@@ -442,7 +458,7 @@ func init() {
 	upCmd.Flags().StringVar(&updateExternalTreeSitterQueries, "external-treesitter-queries", "ask", "when Neovim integration needs optional query-only git repos from the registry: ask (default), always, never (overridden by NVPM_EXTERNAL_TREESITTER_QUERIES when this flag is left at default)")
 	upCmd.Flags().BoolVar(&installAlwaysTrust, "always-trust", false, "persistently skip min-release-age for this package (stored in lock extras.always_trust)")
 	upCmd.Flags().BoolVar(&installNoAlwaysTrust, "no-always-trust", false, "clear extras.always_trust for this package")
-	upCmd.Flags().StringVar(&installUpdateResolution, "update-resolution", "", "git-only: override update-resolution when updating (e.g. always, release-age-gap:30d)")
+	upCmd.Flags().StringVar(&installUpdateResolution, "update-resolution", "", "git-only: override update-resolution when updating (e.g. always, never, prefer-release, release-age-gap:30d)")
 	registerShowFilterFlag(upCmd)
 }
 
@@ -482,10 +498,20 @@ func (us *UpdateService) UpdateAllPackages(showFilters ...[]string) bool {
 	// Check which packages have updates available
 	packagesToUpdate := make([]local_packages_parser.LocalPackageItem, 0)
 	skippedCount := 0
+	skippedPinnedHold := 0
 
 	for _, pkg := range localPackages {
 		if len(filters) > 0 && !packageMatchesShowFilters(pkg.SourceID, filters) {
 			skippedCount++
+			continue
+		}
+		if packageIsPinned(pkg) {
+			if us.checkUpdateAvailability(pkg.SourceID, pkg.Version, pkg.Commit) {
+				skippedPinnedHold++
+				us.output.Printf("%s Skipping %s: pinned at %s. Unpin with `nvpm unpin %s` before updating.\n", IconAlert(), pkg.SourceID, pkg.Version, pkg.SourceID)
+			} else {
+				skippedCount++
+			}
 			continue
 		}
 		hasUpdate := us.checkUpdateAvailability(pkg.SourceID, pkg.Version, pkg.Commit)
@@ -497,6 +523,10 @@ func (us *UpdateService) UpdateAllPackages(showFilters ...[]string) bool {
 	}
 
 	if len(packagesToUpdate) == 0 {
+		if skippedPinnedHold > 0 {
+			us.output.Printf("No packages updated. %d pinned package(s) have updates; unpin them before updating.\n", skippedPinnedHold)
+			return true
+		}
 		us.output.Printf("All %d packages are up to date\n", len(localPackages))
 		return true
 	}
@@ -560,6 +590,9 @@ func (us *UpdateService) UpdateAllPackages(showFilters ...[]string) bool {
 	if waitingCount > 0 {
 		us.output.Printf("  Skipped (waiting for min-release-age): %d\n", waitingCount)
 	}
+	if skippedPinnedHold > 0 {
+		us.output.Printf("  Skipped (pinned): %d\n", skippedPinnedHold)
+	}
 	us.output.Printf("  Failed to update: %d\n", failedCount)
 	us.output.Printf("  Skipped (up to date): %d\n", skippedCount)
 
@@ -611,7 +644,7 @@ func getCurrentVersion() string {
 
 // getLatestVersion fetches the latest release version from GitHub
 func getLatestVersion() (string, error) {
-	resp, err := githubauth.HTTPGet("https://api.github.com/repos/mistweaverco/nvpm-client/releases/latest")
+	resp, err := githubauth.HTTPGet("https://api.github.com/repos/dont-be-evil-company/nvpm-client/releases/latest")
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch latest release: %w", err)
 	}
@@ -685,7 +718,7 @@ func downloadBinary(version, platform string) (string, error) {
 		fileName += ".exe"
 	}
 
-	downloadURL := fmt.Sprintf("https://github.com/mistweaverco/nvpm-client/releases/download/%s/%s", version, fileName)
+	downloadURL := fmt.Sprintf("https://github.com/dont-be-evil-company/nvpm-client/releases/download/%s/%s", version, fileName)
 
 	// Create temporary file
 	tempFile, err := os.CreateTemp("", "nvpm-update-*")

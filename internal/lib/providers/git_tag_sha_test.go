@@ -12,7 +12,7 @@ import (
 
 func TestParseGitTagClobberRejections(t *testing.T) {
 	out := `
-From https://github.com/mistweaverco/floaterm.nvim
+From https://github.com/dont-be-evil-company/floaterm.nvim
  ! [rejected]        v1.1.0     -> v1.1.0  (would clobber existing tag)
  * [new tag]         v9.9.9     -> v9.9.9
  ! [rejected] v1.0.0 -> v1.0.0 (would clobber existing tag)
@@ -25,7 +25,7 @@ func TestCheckGitTagSHAAgainstDiscoveryFloatermRegression(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 
@@ -59,7 +59,7 @@ func TestRecordingLiveTipBeforeSHACheckHidesMismatch(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 	require.NoError(t, RecordDiscovery(sourceID, FormatGitDiscoveryVersion("v1.1.0", oldCommit)))
@@ -84,7 +84,7 @@ func TestEnforceGitTagSHAOrRejectRequiresForce(t *testing.T) {
 	SetDiscoveryWritesEnabled(true)
 	ClearLastError()
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 	require.NoError(t, RecordDiscovery(sourceID, FormatGitDiscoveryVersion("v1.1.0", oldCommit)))
@@ -113,7 +113,7 @@ func TestAcceptGitTagSHAMismatchRecordsLiveTip(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 	require.NoError(t, RecordDiscovery(sourceID, FormatGitDiscoveryVersion("v1.1.0", oldCommit)))
@@ -136,7 +136,7 @@ func TestGitFetchOriginTagsReportsSHAMismatch(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
 
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	oldCommit := "19198f485082474248b5919f6aa0e473a2dd9726"
 	newCommit := "301ea764263d0c1a42a8fc2985047c0012347401"
 	require.NoError(t, RecordDiscovery(sourceID, FormatGitDiscoveryVersion("v1.1.0", oldCommit)))
@@ -204,7 +204,7 @@ func TestGitFetchOriginTagsForceRewrites(t *testing.T) {
 func TestRecordGitUpdateFailureDoesNotDuplicateSHAMismatch(t *testing.T) {
 	ClearLastError()
 	err := &GitTagSHAMismatchError{
-		SourceID:       "github:mistweaverco/floaterm.nvim",
+		SourceID:       "github:dont-be-evil-company/floaterm.nvim",
 		Tag:            "v1.1.0",
 		PreviousCommit: "19198f485082474248b5919f6aa0e473a2dd9726",
 		RemoteCommit:   "301ea764263d0c1a42a8fc2985047c0012347401",
@@ -217,7 +217,7 @@ func TestRecordGitUpdateFailureDoesNotDuplicateSHAMismatch(t *testing.T) {
 func TestDiscoveredCommitsForRef(t *testing.T) {
 	_ = withTempNvpmHome(t)
 	SetDiscoveryWritesEnabled(true)
-	sourceID := "github:mistweaverco/floaterm.nvim"
+	sourceID := "github:dont-be-evil-company/floaterm.nvim"
 	require.NoError(t, RecordDiscovery(sourceID, FormatGitDiscoveryVersion("v1.1.0", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")))
 	got, err := DiscoveredCommitsForRef(sourceID, "v1.1.0")
 	require.NoError(t, err)

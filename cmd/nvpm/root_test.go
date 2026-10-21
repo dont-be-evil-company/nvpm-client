@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/version"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/version"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +50,7 @@ func TestRootCommandFlags(t *testing.T) {
 
 	cacheMaxAgeFlag := rootCmd.PersistentFlags().Lookup("cache-max-age")
 	require.NotNil(t, cacheMaxAgeFlag, "cache-max-age flag should exist")
-	assert.Equal(t, "24h0m0s", cacheMaxAgeFlag.DefValue)
+	assert.Equal(t, "6h0m0s", cacheMaxAgeFlag.DefValue)
 	assert.Equal(t, "cache-max-age", cacheMaxAgeFlag.Name)
 }
 
@@ -117,10 +119,35 @@ func TestExecuteExitsOnError(t *testing.T) {
 	}
 }
 
+func TestPersistentPreRunRegistryCacheMaxAge(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("NVPM_HOME", dir)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("registry:\n  cache-max-age: 7d\n"), 0o644))
+
+	old := cfg.Flags
+	flag := rootCmd.PersistentFlags().Lookup("cache-max-age")
+	require.NotNil(t, flag)
+	changed := flag.Changed
+	t.Cleanup(func() {
+		cfg.Flags = old
+		flag.Changed = changed
+		files.ClearRegistryCacheMaxAgeOverride()
+		files.SetRegistryCacheMaxAgeOverride(old.CacheMaxAge)
+	})
+
+	flag.Changed = false
+	rootCmd.PersistentPreRun(rootCmd, nil)
+	assert.Equal(t, 7*24*time.Hour, cfg.Flags.CacheMaxAge)
+
+	require.NoError(t, rootCmd.ParseFlags([]string{"--cache-max-age", "1h"}))
+	rootCmd.PersistentPreRun(rootCmd, nil)
+	assert.Equal(t, time.Hour, cfg.Flags.CacheMaxAge)
+}
+
 func TestConfigInitialization(t *testing.T) {
 	// Test that config is properly initialized
 	assert.NotNil(t, cfg)
-	assert.Equal(t, 24*time.Hour, cfg.Flags.CacheMaxAge)
+	assert.Equal(t, 6*time.Hour, cfg.Flags.CacheMaxAge)
 	// Note: The version flag might be set to true by default in some environments
 	// We'll just verify it's a boolean value
 	assert.IsType(t, false, cfg.Flags.Version)

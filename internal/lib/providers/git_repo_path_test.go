@@ -12,7 +12,7 @@ func TestResolveInstalledGitRepoPath(t *testing.T) {
 	root := t.TempDir()
 	preferredDir := filepath.Join(root, "plugins", "github")
 	alternateDir := filepath.Join(root, "packages", "github")
-	safeRepo := "mistweaverco_nvpm.nvim"
+	safeRepo := "dont-be-evil-company_nvpm.nvim"
 	preferred := filepath.Join(preferredDir, safeRepo)
 	alternate := filepath.Join(alternateDir, safeRepo)
 

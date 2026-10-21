@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ func (emptyRegistryFileReader) ReadFile(string) ([]byte, error) {
 func TestMatchShowJSONExactAndGlob(t *testing.T) {
 	obj := map[string]any{
 		"name":       "Mistweaver",
-		"package_id": "github:mistweaverco/kulala.nvim",
+		"package_id": "github:dont-be-evil-company/kulala.nvim",
 		"categories": []any{"Plugin", "HTTP"},
 		"provider":   "github",
 		"status":     "installed",
@@ -27,9 +27,9 @@ func TestMatchShowJSONExactAndGlob(t *testing.T) {
 	assert.True(t, MatchShowJSON(obj, []string{".categories:Plugin"}))
 	assert.False(t, MatchShowJSON(obj, []string{"categories:*tree*"}))
 	assert.True(t, MatchShowJSON(obj, []string{"categories:*plug*"}))
-	assert.True(t, MatchShowJSON(obj, []string{"package_id:*mistweaverco/*"}))
-	assert.True(t, MatchShowJSON(obj, []string{"package_id:github:mistweaverco*"}))
-	assert.True(t, MatchShowJSON(obj, []string{"package_id:github:mistweaverco/kulala.nvim"}))
+	assert.True(t, MatchShowJSON(obj, []string{"package_id:*dont-be-evil-company/*"}))
+	assert.True(t, MatchShowJSON(obj, []string{"package_id:github:@dont-be-evil-company**"}))
+	assert.True(t, MatchShowJSON(obj, []string{"package_id:github:dont-be-evil-company/kulala.nvim"}))
 	assert.False(t, MatchShowJSON(obj, []string{"package_id:github:other*"}))
 	assert.True(t, MatchShowJSON(obj, []string{"name:mistweaver"})) // exact after lower
 	assert.False(t, MatchShowJSON(obj, []string{"name:mist"}))      // no glob → exact only
@@ -37,10 +37,10 @@ func TestMatchShowJSONExactAndGlob(t *testing.T) {
 }
 
 func TestParseShowFilterKeepsColonsInValue(t *testing.T) {
-	pathStr, value, err := parseShowFilter("package_id:github:mistweaverco*")
+	pathStr, value, err := parseShowFilter("package_id:github:@dont-be-evil-company**")
 	assert.NoError(t, err)
 	assert.Equal(t, "package_id", pathStr)
-	assert.Equal(t, "github:mistweaverco*", value)
+	assert.Equal(t, "github:@dont-be-evil-company**", value)
 }
 
 func TestMatchShowJSONANDAndMissing(t *testing.T) {

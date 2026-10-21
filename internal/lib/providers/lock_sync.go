@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 )
 
 // InstalledMatchesLock reports whether pkg is already present on disk at the lockfile

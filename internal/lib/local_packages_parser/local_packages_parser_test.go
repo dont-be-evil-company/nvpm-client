@@ -570,6 +570,45 @@ func TestLocalPackagesParserWithMock(t *testing.T) {
 		assert.Nil(t, saved.Packages[0].Extras)
 	})
 
+	t.Run("merge package pinned sets and clears", func(t *testing.T) {
+		existingData := LocalPackageRoot{
+			Packages: []LocalPackageItem{
+				{SourceID: "npm:eslint", Version: "8.0.0"},
+			},
+		}
+		jsonData, _ := json.Marshal(existingData)
+
+		var written []byte
+		mockFileManager := &MockFileManager{
+			GetAppLocalPackagesFilePathFunc: func() string { return "/mock/path/local-packages.json" },
+			FileExistsFunc:                  func(path string) bool { return true },
+			ReadFileFunc: func(path string) ([]byte, error) {
+				if written != nil {
+					return written, nil
+				}
+				return jsonData, nil
+			},
+			WriteFileFunc: func(path string, data []byte, perm uint32) error { written = data; return nil },
+		}
+
+		parser := NewWithFileManager(mockFileManager)
+		err := parser.MergePackagePinned("npm:eslint", true)
+		assert.NoError(t, err)
+
+		var saved LocalPackageRoot
+		_ = json.Unmarshal(written, &saved)
+		if assert.NotNil(t, saved.Packages[0].Extras) {
+			assert.True(t, saved.Packages[0].Extras.Pinned)
+			assert.Equal(t, "8.0.0", saved.Packages[0].Version)
+		}
+
+		err = parser.MergePackagePinned("npm:eslint", false)
+		assert.NoError(t, err)
+		saved = LocalPackageRoot{}
+		_ = json.Unmarshal(written, &saved)
+		assert.Nil(t, saved.Packages[0].Extras)
+	})
+
 	t.Run("merge package extra_packages sets and clears", func(t *testing.T) {
 		existingData := LocalPackageRoot{
 			Packages: []LocalPackageItem{

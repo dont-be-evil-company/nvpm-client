@@ -95,7 +95,7 @@ func TestHTTPGetSetsAuthorizationForGitHubHosts(t *testing.T) {
 	}
 	t.Cleanup(func() { httpDo = oldDo })
 
-	resp, err := HTTPGet("https://api.github.com/repos/mistweaverco/nvpm-client/releases/latest")
+	resp, err := HTTPGet("https://api.github.com/repos/dont-be-evil-company/nvpm-client/releases/latest")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	defer func() { _ = resp.Body.Close() }()
@@ -103,7 +103,7 @@ func TestHTTPGetSetsAuthorizationForGitHubHosts(t *testing.T) {
 	assert.Equal(t, "Bearer secret-token", got.Header.Get("Authorization"))
 	assert.Equal(t, userAgent, got.Header.Get("User-Agent"))
 
-	resp, err = HTTPGet("https://github.com/mistweaverco/nvpm-client/releases/download/v1.0.0/nvpm")
+	resp, err = HTTPGet("https://github.com/dont-be-evil-company/nvpm-client/releases/download/v1.0.0/nvpm")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	defer func() { _ = resp.Body.Close() }()

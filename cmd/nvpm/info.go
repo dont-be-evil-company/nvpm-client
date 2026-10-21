@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
-	"github.com/mistweaverco/nvpm-client/internal/lib/providers"
-	"github.com/mistweaverco/nvpm-client/internal/lib/registry_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/providers"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 	"github.com/spf13/cobra"
 )
 
@@ -242,6 +242,9 @@ func displayPackageInfoRich(item registry_parser.RegistryItem, sourceID string) 
 		if packageAlwaysTrustFromLock(sourceID) {
 			markdown.WriteString("**Always trust:** yes (min-release-age skipped)\n\n")
 		}
+		if packagePinnedFromLock(sourceID) {
+			markdown.WriteString("**Pinned:** yes (updates skip this package until `nvpm unpin`)\n\n")
+		}
 	} else {
 		markdown.WriteString("**Status:** ⬜ Not installed\n\n")
 	}
@@ -337,6 +340,9 @@ func displayPackageInfoPlain(item registry_parser.RegistryItem, sourceID string)
 		if packageAlwaysTrustFromLock(sourceID) {
 			fmt.Printf("Always trust: yes (min-release-age skipped)\n")
 		}
+		if packagePinnedFromLock(sourceID) {
+			fmt.Printf("Pinned: yes (updates skip this package until nvpm unpin)\n")
+		}
 	} else {
 		fmt.Printf("Status: Not installed\n")
 	}
@@ -427,6 +433,7 @@ func buildPackageInfoJSON(item registry_parser.RegistryItem, sourceID string) ma
 		if packageAlwaysTrustFromLock(sourceID) {
 			result["always_trust"] = true
 		}
+		result["pinned"] = packagePinnedFromLock(sourceID)
 	}
 	result["status"] = status
 
@@ -445,6 +452,16 @@ func packageAlwaysTrustFromLock(sourceID string) bool {
 	for _, pkg := range localPackagesRoot.Packages {
 		if pkg.SourceID == sourceID {
 			return pkg.Extras != nil && pkg.Extras.AlwaysTrust
+		}
+	}
+	return false
+}
+
+func packagePinnedFromLock(sourceID string) bool {
+	localPackagesRoot := newLocalPackagesParserFn()
+	for _, pkg := range localPackagesRoot.Packages {
+		if pkg.SourceID == sourceID {
+			return packageIsPinned(pkg)
 		}
 	}
 	return false

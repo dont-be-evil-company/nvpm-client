@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/shell_out"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/shell_out"
 )
 
 const userAgent = "nvpm"

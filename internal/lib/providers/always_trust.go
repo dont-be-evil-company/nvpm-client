@@ -3,7 +3,7 @@ package providers
 import (
 	"strings"
 
-	"github.com/mistweaverco/nvpm-client/internal/lib/local_packages_parser"
+	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 )
 
 // pendingAlwaysTrust holds per-package always_trust set by add/up before the lock is written.
