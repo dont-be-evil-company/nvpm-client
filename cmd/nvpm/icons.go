@@ -3,8 +3,8 @@ package nvpm
 import (
 	"os"
 
-	"github.com/mattn/go-isatty"
 	"github.com/dont-be-evil-company/nvpm-client/internal/config"
+	"github.com/mattn/go-isatty"
 )
 
 // Emoji icons

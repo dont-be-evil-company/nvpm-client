@@ -296,7 +296,10 @@ that are listed in the `nvpm-lock.json` file.
 
 ```sh
 nvpm sync packages
+nvpm sync packages --force
 ```
+
+`--force` deletes local checkouts, plugin clones, build artifacts, and bin links first, then installs every package from the lockfile.
 
 For registry data,
 it'll update the local registry cache

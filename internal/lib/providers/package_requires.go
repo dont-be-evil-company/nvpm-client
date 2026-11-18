@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/mattn/go-isatty"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
+	"github.com/mattn/go-isatty"
 )
 
 // packageRequiresIsInstalled is injectable for tests.

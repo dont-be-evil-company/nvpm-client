@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/mattn/go-isatty"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
+	"github.com/mattn/go-isatty"
 )
 
 // SupportedTreeSitterEditorIntegrations lists editor IDs for which this client implements

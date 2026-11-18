@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
@@ -89,7 +90,11 @@ var syncPackagesCmd = &cobra.Command{
 This command reads the nvpm-lock.json file and ensures that all packages
 are installed with their exact versions as specified in the lock file.
 
-Press Ctrl+C to interrupt gracefully after the current package finishes.`,
+Press Ctrl+C to interrupt gracefully after the current package finishes.
+
+With --force, local checkouts, plugin clones, build artifacts, and bin links
+are deleted first so every lockfile package is installed from a clean slate.
+The lockfile, config, and registry cache are left in place.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
@@ -104,6 +109,23 @@ Press Ctrl+C to interrupt gracefully after the current package finishes.`,
 			fmt.Printf("%s Invalid --external-treesitter-queries: %v\n", IconClose(), err)
 			osExit(1)
 			return
+		}
+		if syncPackagesForce {
+			if !ShouldUseJSONOutput() {
+				fmt.Println("Removing local checkouts and install cache...")
+			}
+			if err := clearLocalInstallCache(); err != nil {
+				if ShouldUseJSONOutput() {
+					PrintJSON(map[string]interface{}{
+						"success": false,
+						"error":   err.Error(),
+					})
+				} else {
+					fmt.Printf("%s Failed to clear local install cache: %v\n", IconClose(), err)
+				}
+				osExit(1)
+				return
+			}
 		}
 		if !ShouldUseJSONOutput() && !ShouldUsePlainOutput() {
 			fmt.Println("Syncing packages from nvpm-lock.json...")
@@ -292,11 +314,31 @@ func printPackagesSyncInterrupted(successCount, skippedCount, failureCount int) 
 }
 
 var syncExternalTreeSitterQueries string
+var syncPackagesForce bool
 
 func init() {
 	syncCmd.AddCommand(syncRegistryCmd)
 	syncCmd.AddCommand(syncPackagesCmd)
 	syncPackagesCmd.Flags().StringVar(&syncExternalTreeSitterQueries, "external-treesitter-queries", "ask", "optional Neovim query-only git clones: ask, always, never (NVPM_EXTERNAL_TREESITTER_QUERIES when default)")
+	syncPackagesCmd.Flags().BoolVar(&syncPackagesForce, "force", false, "delete local checkouts, plugin clones, build artifacts, and bin links, then install from the lockfile")
+}
+
+// clearLocalInstallCache removes on-disk package installs so the following sync
+// reclones and reinstalls from the lockfile. The lockfile, config, and registry
+// cache are not touched.
+func clearLocalInstallCache() error {
+	dirs := []string{
+		files.GetAppPackagesPath(),
+		files.GetAppNeovimPluginsPath(),
+		filepath.Join(files.GetAppDataSharePath(), "artifacts"),
+		files.GetAppBinPath(),
+	}
+	for _, dir := range dirs {
+		if err := os.RemoveAll(dir); err != nil {
+			return fmt.Errorf("clear %s: %w", dir, err)
+		}
+	}
+	return nil
 }
 
 // downloadAndUnzipRegistryForced downloads and unzips the registry, forcing a fresh download

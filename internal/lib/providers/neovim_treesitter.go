@@ -15,13 +15,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/mattn/go-isatty"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/registry_parser"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/shell_out"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/spinnerutil"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/treesitterdeps"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/treesitterquery"
+	"github.com/mattn/go-isatty"
 )
 
 //go:embed validate_query.lua
