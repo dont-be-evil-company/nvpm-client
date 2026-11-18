@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -999,4 +1000,127 @@ func TestNPMCreatePackageSymlinksIgnoresPackageJSONBinsWhenRegistryPresent(t *te
 	assert.NoError(t, err)
 	_, err = os.Lstat(filepath.Join(appBin, "tsserver"))
 	assert.True(t, os.IsNotExist(err))
+}
+
+func TestNPMInstallArgsScriptPolicy(t *testing.T) {
+	old := npmAllowAllScripts
+	t.Cleanup(func() { npmAllowAllScripts = old })
+
+	npmAllowAllScripts = func() bool { return false }
+	assert.Equal(t, []string{"install", "--no-update-notifier", "--no-ignore-scripts", "eslint@9.0.0"}, npmInstallArgs("eslint@9.0.0"))
+	assert.Equal(t, []string{"ci", "--no-update-notifier", "--no-ignore-scripts"}, npmCiArgs())
+
+	npmAllowAllScripts = func() bool { return true }
+	installArgs := npmInstallArgs("@dont-be-evil-company/kulala-fmt@4.8.1")
+	assert.Equal(t, []string{
+		"install",
+		"--no-update-notifier",
+		"--no-ignore-scripts",
+		"--dangerously-allow-all-scripts",
+		"@dont-be-evil-company/kulala-fmt@4.8.1",
+	}, installArgs)
+	assert.Equal(t, []string{
+		"ci",
+		"--no-update-notifier",
+		"--no-ignore-scripts",
+		"--dangerously-allow-all-scripts",
+	}, npmCiArgs())
+}
+
+func TestDetectNpmAllowAllScripts(t *testing.T) {
+	old := npmShellOutCapture
+	t.Cleanup(func() { npmShellOutCapture = old })
+
+	npmShellOutCapture = func(string, []string, string, []string) (int, string, error) {
+		return 0, "v12.1.0\n", nil
+	}
+	assert.True(t, detectNpmAllowAllScripts())
+
+	npmShellOutCapture = func(string, []string, string, []string) (int, string, error) {
+		return 0, "11.16.0\n", nil
+	}
+	assert.False(t, detectNpmAllowAllScripts())
+
+	npmShellOutCapture = func(string, []string, string, []string) (int, string, error) {
+		return 1, "", errors.New("missing")
+	}
+	assert.False(t, detectNpmAllowAllScripts())
+}
+
+func TestNPMSyncInstallFailureSetsLastError(t *testing.T) {
+	_ = withTempNvpmHome(t)
+	ClearLastError()
+	p := NewProviderNPM()
+	assert.NoError(t, os.MkdirAll(p.APP_PACKAGES_DIR, 0755))
+	assert.NoError(t, lppAdd("pkg:npm/kulala-fmt", "4.8.1"))
+
+	oldAllow := npmAllowAllScripts
+	npmAllowAllScripts = func() bool { return true }
+	oldOut := npmShellOut
+	var got []string
+	npmShellOut = func(cmd string, args []string, dir string, env []string) (int, error) {
+		got = append([]string(nil), args...)
+		return 1, errors.New("exit status 1\nnpm ERR! not covered by allowScripts")
+	}
+	t.Cleanup(func() {
+		npmAllowAllScripts = oldAllow
+		npmShellOut = oldOut
+		ClearLastError()
+	})
+
+	assert.False(t, p.Sync())
+	assert.Equal(t, npmInstallArgs("kulala-fmt@4.8.1"), got)
+	msg := PeekLastError()
+	assert.Contains(t, msg, "npm install kulala-fmt@4.8.1 failed")
+	assert.Contains(t, msg, "not covered by allowScripts")
+}
+
+func TestNPMCiFailureDoesNotStickWhenInstallSucceeds(t *testing.T) {
+	_ = withTempNvpmHome(t)
+	ClearLastError()
+	p := NewProviderNPM()
+	assert.NoError(t, os.MkdirAll(p.APP_PACKAGES_DIR, 0755))
+	assert.NoError(t, lppAdd("pkg:npm/a", "2.0.0"))
+	dir := p.packageDir("a")
+	assert.NoError(t, os.MkdirAll(dir, 0755))
+	assert.NoError(t, os.WriteFile(filepath.Join(dir, "package-lock.json"), []byte(`{"lockfileVersion":3}`), 0644))
+
+	oldOut := npmShellOut
+	npmShellOut = func(cmd string, args []string, dir string, env []string) (int, error) {
+		if len(args) > 0 && args[0] == "ci" {
+			return 1, errors.New("ci failed")
+		}
+		return 0, nil
+	}
+	t.Cleanup(func() {
+		npmShellOut = oldOut
+		ClearLastError()
+	})
+
+	assert.True(t, p.Sync())
+	assert.Empty(t, PeekLastError())
+}
+
+func TestNPMSyncDirectoryErrorSetsLastError(t *testing.T) {
+	_ = withTempNvpmHome(t)
+	ClearLastError()
+	p := NewProviderNPM()
+	assert.NoError(t, lppAdd("pkg:npm/a", "1.0.0"))
+	oldMkdir := npmMkdirAll
+	npmMkdirAll = func(string, os.FileMode) error { return errors.New("mkdir boom") }
+	t.Cleanup(func() {
+		npmMkdirAll = oldMkdir
+		ClearLastError()
+	})
+
+	assert.False(t, p.Sync())
+	assert.Contains(t, PeekLastError(), "mkdir boom")
+}
+
+func TestNpmFailureDetailKeepsTail(t *testing.T) {
+	text := strings.Repeat("noise\n", 50) + "npm ERR! the real reason"
+	detail := npmFailureDetail(1, errors.New(text))
+	assert.Contains(t, detail, "npm ERR! the real reason")
+	assert.Equal(t, npmFailureMaxLines, len(strings.Split(detail, "\n")))
+	assert.Equal(t, npmFailureMaxLines-1, strings.Count(detail, "noise"))
 }

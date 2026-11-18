@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/files"
 	"github.com/dont-be-evil-company/nvpm-client/internal/lib/local_packages_parser"
@@ -37,6 +39,90 @@ func npmQuietEnv() []string {
 		"NO_UPDATE_NOTIFIER=1",
 		"npm_config_update_notifier=false",
 	}
+}
+
+// npmAllowAllScripts reports whether npm understands --dangerously-allow-all-scripts
+// (npm 12+). Older npm runs lifecycle scripts by default and rejects the flag.
+// Tests replace this so they do not depend on the machine's npm.
+var npmAllowAllScripts = defaultNpmAllowAllScripts
+
+var (
+	npmAllowAllScriptsOnce sync.Once
+	npmAllowAllScriptsFlag bool
+)
+
+const npmFailureMaxLines = 40
+
+func defaultNpmAllowAllScripts() bool {
+	npmAllowAllScriptsOnce.Do(func() {
+		npmAllowAllScriptsFlag = detectNpmAllowAllScripts()
+	})
+	return npmAllowAllScriptsFlag
+}
+
+func detectNpmAllowAllScripts() bool {
+	code, output, err := npmShellOutCapture("npm", []string{"--version"}, "", npmQuietEnv())
+	if err != nil || code != 0 {
+		return false
+	}
+	return npmMajorVersion(firstNonNoticeLine(output)) >= 12
+}
+
+func npmMajorVersion(version string) int {
+	version = strings.TrimSpace(version)
+	version = strings.TrimPrefix(version, "v")
+	majorStr, _, _ := strings.Cut(version, ".")
+	major, err := strconv.Atoi(majorStr)
+	if err != nil {
+		return 0
+	}
+	return major
+}
+
+// npmScriptPolicyArgs forces dependency lifecycle scripts to run.
+// --ignore-scripts still wins over --dangerously-allow-all-scripts, so both are set.
+func npmScriptPolicyArgs() []string {
+	args := []string{"--no-ignore-scripts"}
+	if npmAllowAllScripts() {
+		args = append(args, "--dangerously-allow-all-scripts")
+	}
+	return args
+}
+
+func npmInstallArgs(spec string) []string {
+	args := []string{"install", "--no-update-notifier"}
+	args = append(args, npmScriptPolicyArgs()...)
+	if spec != "" {
+		args = append(args, spec)
+	}
+	return args
+}
+
+func npmCiArgs() []string {
+	args := []string{"ci", "--no-update-notifier"}
+	return append(args, npmScriptPolicyArgs()...)
+}
+
+func npmFailureDetail(code int, err error) string {
+	detail := ""
+	if err != nil {
+		detail = strings.TrimSpace(err.Error())
+	}
+	if detail == "" {
+		detail = fmt.Sprintf("exit code %d", code)
+	}
+	return tailLines(detail, npmFailureMaxLines)
+}
+
+func tailLines(text string, maxLines int) string {
+	if maxLines <= 0 {
+		return text
+	}
+	lines := strings.Split(text, "\n")
+	if len(lines) <= maxLines {
+		return text
+	}
+	return strings.Join(lines[len(lines)-maxLines:], "\n")
 }
 
 // Injectable local packages helpers for tests
@@ -105,7 +191,7 @@ func (p *NPMProvider) writePackageJSON(dir, name, version string, extras *local_
 	filePath := filepath.Join(dir, "package.json")
 	file, err := npmCreate(filePath)
 	if err != nil {
-		fmt.Println("error creating package.json:", err)
+		logAndSetError(fmt.Sprintf("error creating package.json: %v", err))
 		return false
 	}
 	defer func() {
@@ -117,7 +203,7 @@ func (p *NPMProvider) writePackageJSON(dir, name, version string, extras *local_
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(packageJSON); err != nil {
-		fmt.Println("Error encoding package.json:", err)
+		logAndSetError(fmt.Sprintf("error encoding package.json: %v", err))
 		return false
 	}
 	return true
@@ -267,7 +353,7 @@ func (p *NPMProvider) Clean() bool {
 func (p *NPMProvider) Sync() bool {
 	if _, err := npmStat(p.APP_PACKAGES_DIR); os.IsNotExist(err) {
 		if err := npmMkdirAll(p.APP_PACKAGES_DIR, 0755); err != nil {
-			fmt.Println("error creating directory:", err)
+			logAndSetError(fmt.Sprintf("error creating directory: %v", err))
 			return false
 		}
 	}
@@ -283,7 +369,7 @@ func (p *NPMProvider) Sync() bool {
 		}
 		dir := p.packageDir(name)
 		if err := npmMkdirAll(dir, 0755); err != nil {
-			Logger.Info(fmt.Sprintf("error creating directory %s: %v", dir, err))
+			logAndSetError(fmt.Sprintf("error creating directory %s: %v", dir, err))
 			allOk = false
 			continue
 		}
@@ -299,7 +385,8 @@ func (p *NPMProvider) Sync() bool {
 			}
 			continue
 		}
-		Logger.Info(fmt.Sprintf("npm sync: Installing package %s@%s", name, pkg.Version))
+		spec := name + "@" + pkg.Version
+		Logger.Info(fmt.Sprintf("npm sync: Installing package %s", spec))
 		if p.tryNpmCiIn(dir) {
 			installedCount++
 			if err := p.createPackageSymlinks(name); err != nil {
@@ -307,9 +394,11 @@ func (p *NPMProvider) Sync() bool {
 			}
 			continue
 		}
-		installCode, err := npmShellOut("npm", []string{"install", "--no-update-notifier", name + "@" + pkg.Version}, dir, npmQuietEnv())
+		installArgs := npmInstallArgs(spec)
+		Logger.Debug(fmt.Sprintf("npm sync: running: npm %s (dir=%s)", strings.Join(installArgs, " "), dir))
+		installCode, err := npmShellOut("npm", installArgs, dir, npmQuietEnv())
 		if err != nil || installCode != 0 {
-			Logger.Info(fmt.Sprintf("error installing %s@%s: %v", name, pkg.Version, err))
+			logAndSetError(fmt.Sprintf("npm install %s failed: %s", spec, npmFailureDetail(installCode, err)))
 			allOk = false
 			continue
 		}
@@ -573,9 +662,13 @@ func (p *NPMProvider) tryNpmCiIn(packageDir string) bool {
 		Logger.Info("npm Sync: No package-lock.json found, cannot use npm ci")
 		return false
 	}
+	ciArgs := npmCiArgs()
 	Logger.Info("npm sync: Using npm ci for faster bulk installation")
-	installCode, err := npmShellOut("npm", []string{"ci", "--no-update-notifier"}, packageDir, npmQuietEnv())
+	Logger.Debug(fmt.Sprintf("npm sync: running: npm %s (dir=%s)", strings.Join(ciArgs, " "), packageDir))
+	installCode, err := npmShellOut("npm", ciArgs, packageDir, npmQuietEnv())
 	if err != nil || installCode != 0 {
+		// Fallback only. Do not SetLastError here, or a later successful npm install
+		// would still surface this as the user-facing failure.
 		Logger.Info(fmt.Sprintf("npm sync: npm ci failed, falling back to individual package installation: %v", err))
 		return false
 	}

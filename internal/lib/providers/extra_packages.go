@@ -440,7 +440,7 @@ func extraPackageInstallArgs(parentSourceID, dir string, pkg extraPackage) (cmd 
 		if pkg.Version != "" {
 			spec = pkg.Name + "@" + pkg.Version
 		}
-		return "npm", []string{"install", "--no-update-notifier", spec}, dir, npmQuietEnv(), nil
+		return "npm", npmInstallArgs(spec), dir, npmQuietEnv(), nil
 	case "pypi":
 		spec := pkg.Name
 		if pkg.Version != "" {

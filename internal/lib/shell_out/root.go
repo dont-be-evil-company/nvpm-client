@@ -1,23 +1,28 @@
 package shell_out
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func ShellOut(command string, args []string, dir string, env []string) (int, error) {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = dir
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
 	if env != nil {
 		env = append(env, os.Environ()...)
 		cmd.Env = append(cmd.Env, env...)
 	}
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		if text := strings.TrimSpace(string(output)); text != "" {
+			err = fmt.Errorf("%w\n%s", err, text)
+		}
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			return exitError.ExitCode(), err
 		}
 		return -1, err

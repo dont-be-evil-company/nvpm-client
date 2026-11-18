@@ -3,6 +3,7 @@ package shell_out
 import (
 	"io"
 	"os"
+	"os/exec"
 	"syscall"
 	"testing"
 
@@ -21,6 +22,15 @@ func TestShellOut(t *testing.T) {
 		exitCode, err := ShellOut("false", []string{}, "", nil)
 		assert.Error(t, err)
 		assert.Equal(t, 1, exitCode)
+	})
+
+	t.Run("shell out includes command output in the error", func(t *testing.T) {
+		exitCode, err := ShellOut("sh", []string{"-c", "echo npm-failed >&2; exit 3"}, "", nil)
+		assert.Error(t, err)
+		assert.Equal(t, 3, exitCode)
+		assert.Contains(t, err.Error(), "npm-failed")
+		var exitErr *exec.ExitError
+		assert.ErrorAs(t, err, &exitErr)
 	})
 
 	t.Run("shell out with invalid command", func(t *testing.T) {
